@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Compound — Interest Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0C0F0A;
+    --surface: #141810;
+    --surface2: #1C2118;
+    --surface3: #242B1F;
+    --accent: #7EC85A;
+    --accent2: #4A8C30;
+    --accent-glow: rgba(126,200,90,0.15);
+    --text: #E8F0E3;
+    --text2: #8A9E82;
+    --text3: #4A5A42;
+    --border: rgba(126,200,90,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 390px;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ambient glow */
+  .phone::before {
+    content: '';
+    position: fixed;
+    top: -120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(126,200,90,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Status bar */
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Header */
+  .header {
+    padding: 8px 20px 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .app-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    font-style: italic;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .app-subtitle {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Currency picker */
+  .currency-row {
+    padding: 0 20px 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .currency-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .currency-select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 14px;
+    color: var(--accent);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  #currencySelect {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 8px 36px 8px 16px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #currencySelect:focus {
+    border-color: var(--accent);
+  }
+
+  #currencySelect option {
+    background: #1C2118;
+    color: var(--text);
+  }
+
+  /* Result hero */
+  .result-hero {
+    margin: 0 20px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .result-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(126,200,90,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .result-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--accent);
+    letter-spacing: -1px;
+    word-break: break-all;
+  }
+
+  .result-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .split-item {}
+  .split-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+  .split-value { font-size: 16px; color: var(--text); font-weight: 400; }
+  .split-value.green { color: var(--accent); }
+
+  /* Rule of 72 */
+  .rule72 {
+    margin: 0 20px 20px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+    position: relative;
+  }
+  .rule72 .rule72-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .rule72 strong { color: var(--accent); }
+
+  /* Sliders section */
+  .sliders {
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 10;
+    position: relative;
+  }
+
+  .slider-group {}
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .slider-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+  }
+  .slider-val-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    cursor: text;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+    padding-bottom: 1px;
+  }
+  .slider-val-wrap:focus-within {
+    border-color: var(--accent);
+  }
+  .slider-sym {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1;
+    user-select: none;
+  }
+  .slider-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 80px;
+    text-align: right;
+    padding: 0;
+    -moz-appearance: textfield;
+  }
+  .slider-input::-webkit-outer-spin-button,
+  .slider-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .slider-suffix {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1;
+    user-select: none;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--surface3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent2);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    cursor: pointer;
+  }
+
+  /* Milestones */
+  .milestones-section {
+    margin: 24px 20px 0;
+    z-index: 10;
+    position: relative;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+  .milestones-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .milestone-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    transition: all 0.3s;
+  }
+  .milestone-card.reached {
+    border-color: rgba(126,200,90,0.3);
+    background: var(--surface2);
+  }
+  .milestone-amount { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+  .milestone-year { font-size: 16px; color: var(--text3); }
+  .milestone-year.reached { color: var(--accent); }
+
+  /* Chart */
+  .chart-section {
+    margin: 24px 20px 0;
+    z-index: 10;
+    position: relative;
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 180px;
+  }
+
+  /* Bottom padding */
+  .bottom-pad { height: 40px; }
+
+  /* Divider line */
+  .divider {
+    margin: 0 20px 20px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Track fill via JS */
+  input[type=range].filled {
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val), var(--surface3) var(--val), var(--surface3) 100%);
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span>●●●</span>
+  </div>
+
+  <div class="header">
+    <div class="app-title">Compound</div>
+    <div class="app-subtitle">Interest Calculator</div>
+  </div>
+
+  <div class="currency-row">
+    <div class="currency-select-wrap">
+      <select id="currencySelect">
+        <option value="">— No Currency</option>
+        <option value="£">£ GBP — British Pound</option>
+        <option value="$">$ USD — US Dollar</option>
+        <option value="€">€ EUR — Euro</option>
+        <option value="¥">¥ JPY — Japanese Yen</option>
+        <option value="₹">₹ INR — Indian Rupee</option>
+        <option value="A$">A$ AUD — Australian Dollar</option>
+        <option value="C$">C$ CAD — Canadian Dollar</option>
+        <option value="Fr">Fr CHF — Swiss Franc</option>
+        <option value="kr">kr SEK — Swedish Krona</option>
+        <option value="R">R ZAR — South African Rand</option>
+        <option value="₿">₿ BTC — Bitcoin</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="result-hero">
+    <div class="result-label">Final value</div>
+    <div class="result-value" id="finalVal">£147,608</div>
+    <div class="result-split">
+      <div class="split-item">
+        <div class="split-label">Invested</div>
+        <div class="split-value" id="investedVal">£53,000</div>
+      </div>
+      <div class="split-item">
+        <div class="split-label">Interest</div>
+        <div class="split-value green" id="interestVal">£94,608</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule72" id="rule72">
+    <span class="rule72-icon">◎</span>
+    <span id="rule72Text">At 7%, your money doubles every <strong>10.3 yrs</strong></span>
+  </div>
+
+  <div class="sliders">
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">Initial deposit</span>
+        <div class="slider-val-wrap">
+          <span class="slider-sym" id="principalSym">£</span>
+          <input class="slider-input" id="principalInput" type="number" min="0" max="10000000" value="5000">
+        </div>
+      </div>
+      <input type="range" id="principal" min="100" max="100000" step="100" value="5000">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">Monthly contribution</span>
+        <div class="slider-val-wrap">
+          <span class="slider-sym" id="monthlySym">£</span>
+          <input class="slider-input" id="monthlyInput" type="number" min="0" max="100000" value="200">
+        </div>
+      </div>
+      <input type="range" id="monthly" min="0" max="5000" step="50" value="200">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">Annual rate</span>
+        <div class="slider-val-wrap">
+          <input class="slider-input" id="rateInput" type="number" min="0" max="100" step="0.5" value="7" style="width:50px;">
+          <span class="slider-suffix">%</span>
+        </div>
+      </div>
+      <input type="range" id="rate" min="0.5" max="20" step="0.5" value="7">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">Time horizon</span>
+        <div class="slider-val-wrap">
+          <input class="slider-input" id="yearsInput" type="number" min="1" max="100" step="1" value="20" style="width:44px;">
+          <span class="slider-suffix">yrs</span>
+        </div>
+      </div>
+      <input type="range" id="years" min="1" max="50" step="1" value="20">
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="section-title">Growth over time</div>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="milestones-section">
+    <div class="section-title">Milestones</div>
+    <div class="milestones-grid" id="milestoneGrid"></div>
+  </div>
+
+  <div class="bottom-pad"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  let sym = '';
+  let chartInstance = null;
+
+  // Live clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+
+  // Set initial sym symbols to empty (No Currency default)
+  ['principalSym','monthlySym'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = sym;
+  });
+
+  // Currency selection
+  document.getElementById('currencySelect').addEventListener('change', function() {
+    sym = this.value;
+    ['principalSym','monthlySym'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = sym;
+    });
+    update();
+  });
+
+  function fmt(v) {
+    if (!sym) return Math.round(v).toLocaleString('en-GB');
+    if (sym === '₿') return sym + (v / 100000).toFixed(5);
+    return sym + Math.round(v).toLocaleString('en-GB');
+  }
+
+  function fmtMilestone(v) {
+    if (!sym) return Math.round(v).toLocaleString();
+    if (v >= 1000000) return sym + (v/1000000).toFixed(1) + 'M';
+    if (v >= 1000) return sym + (v/1000).toFixed(0) + 'K';
+    return sym + v;
+  }
+
+  function calcData(principal, monthly, rate, years) {
+    const r = rate / 100 / 12;
+    const pts = [];
+    for (let y = 0; y <= years; y++) {
+      const n = y * 12;
+      let fv = r === 0
+        ? principal + monthly * n
+        : principal * Math.pow(1+r,n) + monthly * ((Math.pow(1+r,n)-1)/r);
+      pts.push({ year: y, fv: Math.round(fv), invested: Math.round(principal + monthly*n) });
+    }
+    return pts;
+  }
+
+  function updateTrack(el) {
+    const min = +el.min, max = +el.max, val = Math.min(+el.value, max);
+    const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+    el.style.background = `linear-gradient(to right, #7EC85A 0%, #7EC85A ${pct}, #242B1F ${pct}, #242B1F 100%)`;
+  }
+
+  function getValues() {
+    return {
+      principal: Math.max(0, +document.getElementById('principalInput').value || 0),
+      monthly:   Math.max(0, +document.getElementById('monthlyInput').value || 0),
+      rate:      Math.max(0, +document.getElementById('rateInput').value || 0),
+      years:     Math.max(1, Math.round(+document.getElementById('yearsInput').value) || 1),
+    };
+  }
+
+  function update() {
+    const { principal, monthly, rate, years } = getValues();
+
+    // Keep sliders in sync (clamp to slider range)
+    const sliderPrincipal = document.getElementById('principal');
+    const sliderMonthly   = document.getElementById('monthly');
+    const sliderRate      = document.getElementById('rate');
+    const sliderYears     = document.getElementById('years');
+
+    sliderPrincipal.value = Math.min(principal, +sliderPrincipal.max);
+    sliderMonthly.value   = Math.min(monthly, +sliderMonthly.max);
+    sliderRate.value      = Math.min(rate, +sliderRate.max);
+    sliderYears.value     = Math.min(years, +sliderYears.max);
+
+    ['principal','monthly','rate','years'].forEach(id => updateTrack(document.getElementById(id)));
+
+    // Calc
+    const data = calcData(principal, monthly, rate, years);
+    const last = data[data.length - 1];
+    const interest = last.fv - last.invested;
+
+    document.getElementById('finalVal').textContent = fmt(last.fv);
+    document.getElementById('investedVal').textContent = fmt(last.invested);
+    document.getElementById('interestVal').textContent = fmt(interest);
+
+    // Rule of 72
+    const doubles = rate > 0 ? (72 / rate).toFixed(1) : '—';
+    document.getElementById('rule72Text').innerHTML =
+      rate > 0
+        ? `At ${rate}%, money doubles every <strong>${doubles} yrs</strong>`
+        : `Set a rate to see the doubling time`;
+
+    // Chart
+    const step = Math.max(1, Math.floor(years/10));
+    const filtered = data.filter((_,i) => i % step === 0 || i === years);
+    const labels  = filtered.map(d => `Yr ${d.year}`);
+    const fvData  = filtered.map(d => d.fv);
+    const invData = filtered.map(d => d.invested);
+
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Total value',
+            data: fvData,
+            borderColor: '#7EC85A',
+            backgroundColor: 'rgba(126,200,90,0.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          },
+          {
+            label: 'Invested',
+            data: invData,
+            borderColor: 'rgba(138,158,130,0.4)',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [4,4],
+            fill: false,
+            tension: 0.4,
+            pointRadius: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1C2118',
+            borderColor: 'rgba(126,200,90,0.2)',
+            borderWidth: 1,
+            titleColor: '#8A9E82',
+            bodyColor: '#E8F0E3',
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(126,200,90,0.05)' },
+            ticks: { color: '#4A5A42', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 6 }
+          },
+          y: {
+            grid: { color: 'rgba(126,200,90,0.05)' },
+            ticks: {
+              color: '#4A5A42',
+              font: { family: 'DM Mono', size: 10 },
+              callback: v => {
+                if (!sym) return v >= 1000 ? (v/1000).toFixed(0)+'K' : v;
+                if (v >= 1000000) return sym + (v/1000000).toFixed(1)+'M';
+                if (v >= 1000) return sym + (v/1000).toFixed(0)+'K';
+                return sym + v;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Milestones
+    const milestones = [10000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000];
+    const grid = document.getElementById('milestoneGrid');
+    grid.innerHTML = '';
+    milestones.forEach(m => {
+      const pt = data.find(d => d.fv >= m);
+      const reached = !!pt && pt.year <= years;
+      const card = document.createElement('div');
+      card.className = 'milestone-card' + (reached ? ' reached' : '');
+      card.innerHTML = `<div class="milestone-amount">${fmtMilestone(m)}</div>
+        <div class="milestone-year ${reached ? 'reached' : ''}">${reached ? 'Year ' + pt.year : '—'}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // Sliders → inputs
+  document.getElementById('principal').addEventListener('input', function() {
+    document.getElementById('principalInput').value = this.value;
+    update();
+  });
+  document.getElementById('monthly').addEventListener('input', function() {
+    document.getElementById('monthlyInput').value = this.value;
+    update();
+  });
+  document.getElementById('rate').addEventListener('input', function() {
+    document.getElementById('rateInput').value = this.value;
+    update();
+  });
+  document.getElementById('years').addEventListener('input', function() {
+    document.getElementById('yearsInput').value = this.value;
+    update();
+  });
+
+  // Inputs → sliders
+  ['principalInput','monthlyInput','rateInput','yearsInput'].forEach(id => {
+    document.getElementById(id).addEventListener('input', update);
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.target.blur();
+    });
+  });
+
+  update();
+</script>
+</body>
+</html>
